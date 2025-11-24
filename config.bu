@@ -1,0 +1,108 @@
+variant: fcos
+version: 1.6.0
+passwd:
+  users:
+    - name: core
+      groups:
+        - video
+        - render
+        - docker
+        - wheel
+        - sudo
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgewNAPmmeOuENkzVLqrZB0qhTvhkk1oKVZgfUcUYPo
+storage:
+  disks:
+    - device: /dev/disk/by-id/nvme-eui.002538483140335a
+      wipe_table: true
+      partitions:
+        - label: raid-member-1
+          number: 1
+          size_mib: 0
+    - device: /dev/disk/by-id/nvme-eui.0025384841406911
+      wipe_table: true
+      partitions:
+        - label: raid-member-2
+          number: 1
+          size_mib: 0
+  raid:
+    - name: containers
+      level: raid0
+      devices:
+        - /dev/disk/by-partlabel/raid-member-1
+        - /dev/disk/by-partlabel/raid-member-2
+  filesystems:
+    - path: /var/lib/containers
+      device: /dev/md/containers
+      format: xfs
+      wipe_filesystem: true
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: |
+          octopus
+    # Bond interface
+    - path: /etc/NetworkManager/system-connections/bond0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0
+          type=bond
+          interface-name=bond0
+          autoconnect=true
+          [bond]
+          mode=802.3ad
+          miimon=100
+          lacp_rate=fast
+          xmit_hash_policy=layer3+4
+          [ipv4]
+          address1=172.22.3.60/24,172.22.3.1
+          dns=8.8.8.8;8.8.4.4;
+          dns-search=
+          may-fail=false
+          method=manual
+          [ipv6]
+          method=disabled
+    # Bond slave: enp9s0f0
+    - path: /etc/NetworkManager/system-connections/bond0-slave-enp9s0f0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-enp9s0f0
+          type=ethernet
+          interface-name=enp9s0f0
+          master=bond0
+          slave-type=bond
+          autoconnect=true
+    # Bond slave: enp9s0f1
+    - path: /etc/NetworkManager/system-connections/bond0-slave-enp9s0f1.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-enp9s0f1
+          type=ethernet
+          interface-name=enp9s0f1
+          master=bond0
+          slave-type=bond
+          autoconnect=true
+systemd:
+  units:
+    - name: var-lib-containers.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Mount containers storage
+        Before=local-fs.target
+
+        [Mount]
+        What=/dev/md/containers
+        Where=/var/lib/containers
+        Type=xfs
+        Options=defaults
+
+        [Install]
+        WantedBy=local-fs.target
