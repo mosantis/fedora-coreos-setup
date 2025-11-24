@@ -95,6 +95,7 @@ sudo podman run --replace --name=pihole \
   -e DNS1=1.1.1.1 \
   -e DNS2=1.0.0.1 \
   -e DNSSEC=true \
+  -e DNSMASQ_LISTENING=all \
   -e CONDITIONAL_FORWARDING=true \
   -e CONDITIONAL_FORWARDING_IP=172.22.3.1 \
   -e CONDITIONAL_FORWARDING_DOMAIN=lan \
@@ -116,6 +117,7 @@ sudo podman exec -it pihole pihole setpassword 'Pit0yFlauta2112!'
   sudo mkdir -p /etc/containers/systemd
   sudo nano /etc/containers/systemd/pihole.container
 
+
 [Unit]
 Description=Pi-hole DNS
 After=network-online.target
@@ -126,20 +128,25 @@ Image=docker.io/pihole/pihole
 ContainerName=pihole
 HostName=pihole
 AddCapability=NET_ADMIN
+# host is handling time sync
+# AddCapability=CAP_SYS_TIME
 DNS=127.0.0.1
 DNS=1.1.1.1
 Environment=TZ=America/Miami
 Environment=SERVERIP=172.22.3.60
 Environment=DNS1=1.1.1.1
 Environment=DNS2=1.0.0.1
-Environment=DNSSEC=true
+Environment=FTLCONF_dns_dnssec=true
+Environment=FTLCONF_dns_listeningMode=all
+Environment=FTLCONF_dns_ipv6=false
+Environment=FTLCONF_webserver_port=443s
 Environment=CONDITIONAL_FORWARDING=true
 Environment=CONDITIONAL_FORWARDING_IP=172.22.3.1
 Environment=CONDITIONAL_FORWARDING_DOMAIN=lan
 Environment=TEMPERATUREUNIT=c
 Volume=pihole_pihole:/etc/pihole:Z
 Volume=pihole_dnsmasq:/etc/dnsmasq.d:Z
-PublishPort=443:443/tcp
+PublishPort=9090:443/tcp
 PublishPort=67:67/udp
 PublishPort=53:53/tcp
 PublishPort=53:53/udp
